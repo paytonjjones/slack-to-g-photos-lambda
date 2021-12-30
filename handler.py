@@ -1,24 +1,20 @@
 import json
+import os
+from dotenv import load_dotenv
+
+from utils import create_slack_client, get_photo_dictionary_from_channel
+
+load_dotenv()
 
 
-def hello(event, context):
+def handler(event, context):
+    client = create_slack_client()
+    photo_dictionary = get_photo_dictionary_from_channel("photos", client)
     body = {
-        "message": "Go Serverless v1.0! Your function executed successfully!",
-        "input": event
+        "message": photo_dictionary,
+        "input": event,
     }
 
-    response = {
-        "statusCode": 200,
-        "body": json.dumps(body)
-    }
+    response = {"statusCode": 200, "body": json.dumps(body)}
 
     return response
-
-    # Use this code if you don't use the http event with the LAMBDA-PROXY
-    # integration
-    """
-    return {
-        "message": "Go Serverless v1.0! Your function executed successfully!",
-        "event": event
-    }
-    """

@@ -60,7 +60,7 @@ layers:
 After successful deployment, you can invoke the deployed function by using the following command:
 
 ```bash
-serverless invoke --function hello
+serverless invoke --function get_photos
 ```
 
 Which should result in response similar to the following:

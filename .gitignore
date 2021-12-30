@@ -22,3 +22,6 @@ var/
 
 # Node
 node_modules/
+
+# notebooks
+*.ipynb
