@@ -1,6 +1,8 @@
 # Distribution / packaging
+__pycache__/
 .Python
 .env
+google-drive-creds.json
 env/
 build/
 develop-eggs/
