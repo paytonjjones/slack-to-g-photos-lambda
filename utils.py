@@ -1,6 +1,7 @@
 import os
 import smtplib
 import requests
+import itertools
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -85,4 +86,12 @@ def send_email(
     smtp.login(send_from, password)
     smtp.sendmail(send_from, send_to, msg.as_string())
     smtp.close()
+
+
+def split_dict(x, chunks):
+    i = itertools.cycle(range(chunks))
+    split = [dict() for _ in range(chunks)]
+    for k, v in x.items():
+        split[next(i)][k] = v
+    return split
 

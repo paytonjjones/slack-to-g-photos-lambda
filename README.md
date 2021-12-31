@@ -77,7 +77,7 @@ Which should result in response similar to the following:
 You can invoke your function locally by using the following command:
 
 ```bash
-serverless invoke local --function hello
+serverless invoke local --function get_photos
 ```
 
 Which should result in response similar to the following:
