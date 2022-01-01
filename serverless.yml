@@ -19,17 +19,14 @@ service: slack-to-g-photos-lambda
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
 frameworkVersion: '2'
-userDotenv: true
-
 provider:
   name: aws
   stackName: ${self:service}
   runtime: python3.8
   lambdaHashingVersion: 20201221
-
-# you can overwrite defaults here
-stage: dev
-region: us-west-2
+  # you can overwrite defaults here
+  stage: dev
+  region: us-west-2
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:

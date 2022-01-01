@@ -29,22 +29,33 @@ def get_channel_id(channel_name, client=None):
     return conversation_id
 
 
-def get_photo_dictionary_from_channel(channel_name, client=None):
+def get_photo_dictionary_from_channel(channel_name, after_timestamp=0, client=None):
     channel_id = get_channel_id(channel_name, client)
-    channel_messages = client.conversations_history(channel=channel_id)
-
     photo_dictionary = {}
-    for message in channel_messages["messages"]:
-        files = message.get("files")
-        if files is not None:
-            for file in files:
-                try:
-                    photo_name = file.get("name")
-                    url_private = file.get("url_private")
-                    photo_dictionary.update({photo_name: url_private})
-                except Exception as e:
-                    print(e)
-                    print(file)
+    next_cursor = None
+
+    while True:
+        channel_messages = client.conversations_history(
+            channel=channel_id, oldest=after_timestamp, cursor=next_cursor, limit=200
+        )
+
+        for message in channel_messages["messages"]:
+            files = message.get("files")
+            if files is not None:
+                for file in files:
+                    try:
+                        photo_id = file.get("name")
+                        url_private = file.get("url_private")
+                        photo_dictionary.update({photo_id: url_private})
+                    except Exception as e:
+                        print(e)
+                        print(file)
+
+        metadata = channel_messages.get("response_metadata")
+        if metadata is None:
+            break
+        else:
+            next_cursor = metadata.get("next_cursor")
 
     return photo_dictionary
 
@@ -77,7 +88,8 @@ def send_email(
             response = requests.get(
                 image_url, headers={"Authorization": "Bearer %s" % slack_token}
             )
-            part = MIMEApplication(response.content, Name=image_name)
+            ext = image_name.split(".")[-1:]
+            part = MIMEApplication(response.content, Name=image_name, _subtype=ext)
             part["Content-Disposition"] = 'attachment; filename="%s"' % image_name
             msg.attach(part)
 

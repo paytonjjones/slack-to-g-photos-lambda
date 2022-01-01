@@ -1,7 +1,7 @@
 import json
 import os
 from dotenv import load_dotenv
-from datetime import date
+from datetime import datetime, timedelta
 
 from utils import (
     create_slack_client,
@@ -14,8 +14,12 @@ load_dotenv()
 
 
 def handler(event, context):
+    # after_timestamp = (datetime.now() - timedelta(hours=1)).timestamp()
+    after_timestamp = 0
     client = create_slack_client()
-    photo_dictionary = get_photo_dictionary_from_channel("photos", client)
+    photo_dictionary = get_photo_dictionary_from_channel(
+        "photos", after_timestamp, client
+    )
 
     chunks_of = 3
     total_chunks = int(len(photo_dictionary) / chunks_of)
