@@ -2,9 +2,9 @@ import os
 import smtplib
 import requests
 import itertools
-from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from email.utils import COMMASPACE, formatdate
 
 from dotenv import load_dotenv
@@ -84,14 +84,13 @@ def send_email(
     msg.attach(MIMEText(text))
 
     for image_name, image_url in image_dict.items():
-        if image_url is not None:
+        if image_url is not None and "HDR." not in image_name:
             response = requests.get(
                 image_url, headers={"Authorization": "Bearer %s" % slack_token}
             )
-            ext = image_name.split(".")[-1:]
-            part = MIMEApplication(response.content, Name=image_name, _subtype=ext)
-            part["Content-Disposition"] = 'attachment; filename="%s"' % image_name
-            msg.attach(part)
+            image = MIMEImage(response.content)
+            image.add_header("Content-Disposition", "attachment", filename=image_name)
+            msg.attach(image)
 
     smtp = smtplib.SMTP(server)
     smtp.starttls()
