@@ -55,18 +55,45 @@ def get_photo_dictionary_from_channel(
             if files is not None:
                 for file in files:
                     try:
-                        image_id = file.get("id")
-                        image_name = file.get("name")
-                        url_private = file.get("url_private")
-                        photo_dictionary.update(
-                            {
-                                image_id: {
-                                    "image_name": image_name,
-                                    "url_private": url_private,
-                                    "attached": False,
-                                }
-                            }
-                        )
+                        image_deleted = file["mode"] == "tombstone"
+                        if not image_deleted:
+                            image_id = file.get("id")
+                            image_name = file.get("name")
+                            image_name_clean = "".join(
+                                [
+                                    x if (x.isalnum() or x in ".-") else "_"
+                                    for x in image_name
+                                ]
+                            )
+                            is_hdr = "HDR." in image_name_clean
+                            ext = image_name_clean.split(".")[-1]
+                            valid_extension = ext in [
+                                "jpg",
+                                "JPG",
+                                "jpeg",
+                                "JPEG",
+                                "png",
+                                "PNG",
+                            ]
+                            url_private = file.get("url_private")
+                            if (
+                                valid_extension
+                                and not is_hdr
+                                and url_private is not None
+                            ):
+                                photo_dictionary.update(
+                                    {
+                                        image_id: {
+                                            "image_name": image_name_clean,
+                                            "url_private": url_private,
+                                            "attached": False,
+                                        }
+                                    }
+                                )
+                            else:
+                                logger.info("File not in acceptable format:")
+                                logger.info(image_name_clean)
+                                logger.info(url_private)
                     except Exception as e:
                         logger.info(e)
                         logger.info(file)
@@ -97,6 +124,7 @@ def send_email(
     assert isinstance(send_to, list)
 
     retries = 0
+    has_attachment = False
     while retries < max_retries:
         try:
             msg = MIMEMultipart()
@@ -110,20 +138,15 @@ def send_email(
             for image_id, image_info in photo_dictionary.items():
                 image_name = image_info.get("image_name")
                 url_private = image_info.get("url_private")
-                if url_private is not None and "HDR." not in image_name:
+                if url_private is not None:
                     try:
                         response = requests.get(
                             url_private,
                             headers={"Authorization": "Bearer %s" % slack_token},
                         )
                         image = MIMEImage(response.content)
-                        image_name_as_valid_file = "".join(
-                            [x if x.isalnum() else "_" for x in image_name]
-                        )
                         image.add_header(
-                            "Content-Disposition",
-                            "attachment",
-                            filename=image_name_as_valid_file,
+                            "Content-Disposition", "attachment", filename=image_name,
                         )
                         msg.attach(image)
                         photo_dictionary[image_id].update(
@@ -133,16 +156,18 @@ def send_email(
                                 "attached": True,
                             }
                         )
+                        has_attachment = True
                     except Exception as e:
                         logger.info(e)
                         logger.info(image_name)
                         logger.info(url_private)
 
-            smtp = smtplib.SMTP(server)
-            smtp.starttls()
-            smtp.login(send_from, password)
-            smtp.sendmail(send_from, send_to, msg.as_string())
-            smtp.close()
+            if has_attachment:
+                smtp = smtplib.SMTP(server)
+                smtp.starttls()
+                smtp.login(send_from, password)
+                smtp.sendmail(send_from, send_to, msg.as_string())
+                smtp.close()
             retries = max_retries
         except Exception as e:
             retries += 1
@@ -188,11 +213,12 @@ def update_dynamodb(photo_dictionary, table_name, dynamodb_client=None):
                 dynamodb_client.update_item(
                     TableName=table_name,
                     Key={"image_id": {"S": image_id}},
-                    UpdateExpression="set image_name=:n, url_private=:u, attached=:a",
+                    UpdateExpression="set image_name=:n, url_private=:u, attached=:a, updated_at=:t",
                     ExpressionAttributeValues={
                         ":n": {"S": image_name},
                         ":u": {"S": url_private},
                         ":a": {"BOOL": attached},
+                        ":t": {"S": str(datetime.now())},
                     },
                     ReturnValues="UPDATED_NEW",
                 )
