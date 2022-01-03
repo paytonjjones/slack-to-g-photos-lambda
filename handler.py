@@ -21,11 +21,10 @@ logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
+    verify = True  # for execution behind VPN set verify=False
     # previously added images
     dynamodb_resource = boto3.resource(
-        "dynamodb",
-        region_name=os.environ["AWS_REGION"],
-        verify=True,  # for local execution set verify=False
+        "dynamodb", region_name=os.environ["AWS_REGION"], verify=verify,
     )
     dynamo_dict = get_dictionary_from_dynamodb(
         os.environ["DYNAMODB_TABLE_NAME"], dynamodb_resource
@@ -35,15 +34,13 @@ def handler(event, context):
     latest = datetime.now().timestamp()
     oldest = (datetime.now() - timedelta(hours=24)).timestamp()
 
-    # for specific date execution use:
-    # oldest = (datetime.now() - timedelta(days=30)).timestamp()
-    # latest = (datetime.now() - timedelta(days=5)).timestamp()
-
     # new images from slack
     client = create_slack_client()
     photo_dictionary = get_photo_dictionary_from_channel(
         "photos", oldest, latest, client
     )
+    logger.info("Slack images from past 24 hours...")
+    logger.info(photo_dictionary)
 
     photo_dictionary.update(dynamo_dict)
 
@@ -71,7 +68,7 @@ def handler(event, context):
             photo_dictionary.update(updated_dict)
 
         dynamodb_client = boto3.client(
-            "dynamodb", region_name=os.environ["AWS_REGION"], verify=False
+            "dynamodb", region_name=os.environ["AWS_REGION"], verify=verify
         )
         update_dynamodb(
             photo_dictionary, os.environ["DYNAMODB_TABLE_NAME"], dynamodb_client
