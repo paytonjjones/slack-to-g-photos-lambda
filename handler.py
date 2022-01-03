@@ -33,7 +33,7 @@ def handler(event, context):
 
     # date range
     latest = datetime.now().timestamp()
-    oldest = (datetime.now() - timedelta(hours=2)).timestamp()
+    oldest = (datetime.now() - timedelta(hours=24)).timestamp()
 
     # for specific date execution use:
     # oldest = (datetime.now() - timedelta(days=30)).timestamp()

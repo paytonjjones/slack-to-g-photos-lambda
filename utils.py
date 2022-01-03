@@ -163,18 +163,24 @@ def send_email(
                         logger.info(url_private)
 
             if has_attachment:
-                smtp = smtplib.SMTP(server)
+                logger.info("Sending email...")
+                smtp = smtplib.SMTP(server, 587)
                 smtp.starttls()
                 smtp.login(send_from, password)
+                logger.info("Email login successful...")
                 smtp.sendmail(send_from, send_to, msg.as_string())
                 smtp.close()
-            retries = max_retries
+                logger.info("Email sent!")
+                return photo_dictionary
+            else:
+                logger.info("No attachments found, nothing to send")
+                return {}
         except Exception as e:
             retries += 1
             logger.info(e)
             logger.info("Error in sending email. Retrying...")
             continue
-    return photo_dictionary
+    return {}
 
 
 def split_dict(x, chunks):
