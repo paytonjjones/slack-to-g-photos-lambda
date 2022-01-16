@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.utils import COMMASPACE, formatdate
 
+from pytz import timezone
 from dotenv import load_dotenv
 from slack_sdk import WebClient
 
@@ -16,6 +17,11 @@ load_dotenv()
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+
+def logTime(tz="US/Pacific"):
+    time = datetime.now(tz=timezone(tz)).strftime("%I:%M %p")
+    logger.info(f"The current time in {tz} is {time}")
 
 
 def create_slack_client():

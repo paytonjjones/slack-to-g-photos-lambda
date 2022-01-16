@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from utils import (
     create_slack_client,
     get_photo_dictionary_from_channel,
+    logTime,
     send_email,
     split_dict,
     get_dictionary_from_dynamodb,
@@ -21,6 +22,7 @@ logger.setLevel(logging.INFO)
 
 
 def handler(event, context):
+    logTime("US/Pacific")
     verify = True  # for execution behind VPN set verify=False
     # previously added images
     dynamodb_resource = boto3.resource(
