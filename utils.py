@@ -59,20 +59,21 @@ def get_photo_dictionary_from_channel(
         for message in channel_messages["messages"]:
             files = message.get("files")
             if files is not None:
-                for file in files:
+                image_names = []
+                for i, file in enumerate(files):
                     try:
                         image_deleted = file["mode"] == "tombstone"
                         if not image_deleted:
                             image_id = file.get("id")
                             image_name = file.get("name")
-                            image_name_clean = "".join(
+                            image_name_formatted = "".join(
                                 [
                                     x if (x.isalnum() or x in ".-") else "_"
                                     for x in image_name
                                 ]
                             )
-                            is_hdr = "HDR." in image_name_clean
-                            ext = image_name_clean.split(".")[-1]
+                            is_hdr = "HDR." in image_name_formatted
+                            ext = image_name_formatted.split(".")[-1]
                             valid_extension = ext in [
                                 "jpg",
                                 "JPG",
@@ -87,6 +88,18 @@ def get_photo_dictionary_from_channel(
                                 and not is_hdr
                                 and url_private is not None
                             ):
+                                name_is_duplicate = image_name_formatted in image_names
+                                if name_is_duplicate:
+                                    name_without_ext = image_name_formatted.split(".")[
+                                        -2
+                                    ]
+                                    iterated_suffix = "__" + i
+                                    image_name_clean = (
+                                        name_without_ext + iterated_suffix + "." + ext
+                                    )
+                                else:
+                                    image_name_clean = image_name_formatted
+                                image_names.append(image_name_clean)
                                 photo_dictionary.update(
                                     {
                                         image_id: {
