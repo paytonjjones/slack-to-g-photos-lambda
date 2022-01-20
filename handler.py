@@ -58,7 +58,10 @@ def handler(event, context):
         for mini_photo_dict in split_dict(photo_dictionary, total_chunks):
             updated_dict = send_email(
                 send_from=os.environ["EMAIL_ADDRESS"],
-                send_to=[os.environ["PHOTO_FRAME_EMAIL_ADDRESS"]],
+                send_to=[
+                    os.environ["PHOTO_FRAME_EMAIL_ADDRESS"],
+                    os.environ["ADDITIONAL_SEND_TO_ADDRESS"],
+                ],
                 subject="New Photos From Slack",
                 text="Photos sent via AWS Lambda",
                 password=os.environ["EMAIL_PASSWORD"],
