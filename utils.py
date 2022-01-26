@@ -93,7 +93,7 @@ def get_photo_dictionary_from_channel(
                                     name_without_ext = image_name_formatted.split(".")[
                                         -2
                                     ]
-                                    iterated_suffix = "__" + i
+                                    iterated_suffix = "__" + str(i)
                                     image_name_clean = (
                                         name_without_ext + iterated_suffix + "." + ext
                                     )
