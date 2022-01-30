@@ -40,6 +40,49 @@ def get_channel_id(channel_name, client=None):
     return conversation_id
 
 
+def get_formatted_image_name(file):
+    image_name = file.get("name")
+    image_name_formatted = "".join(
+        [x if (x.isalnum() or x in ".-") else "_" for x in image_name]
+    )
+    return image_name_formatted
+
+
+def check_file_validity(file):
+    image_deleted = file.get("mode") == "tombstone"
+    if image_deleted:
+        return False
+    image_name_formatted = get_formatted_image_name(file)
+    is_hdr = "HDR." in image_name_formatted
+    if is_hdr:
+        return False
+    ext = image_name_formatted.split(".")[-1]
+    valid_extension = ext in [
+        "jpg",
+        "JPG",
+        "jpeg",
+        "JPEG",
+        "png",
+        "PNG",
+    ]
+    if not valid_extension:
+        return False
+    url_private = file.get("url_private")
+    if url_private is None:
+        return False
+    return True
+
+
+def deduplicate_image_name(image_name, is_duplicate, iterator):
+    if is_duplicate:
+        name_without_ext = image_name.split(".")[-2]
+        ext = image_name.split(".")[-1]
+        iterated_suffix = "__" + str(iterator)
+        return name_without_ext + iterated_suffix + "." + ext, iterator + 1
+    else:
+        return image_name, iterator
+
+
 def get_photo_dictionary_from_channel(
     channel_name, oldest=0, latest=datetime.now().timestamp(), client=None
 ):
@@ -48,7 +91,7 @@ def get_photo_dictionary_from_channel(
     next_cursor = None
 
     while True:
-        channel_messages = client.conversations_history(
+        batch_of_channel_messages = client.conversations_history(
             channel=channel_id,
             oldest=oldest,
             latest=latest,
@@ -56,68 +99,40 @@ def get_photo_dictionary_from_channel(
             limit=200,
         )
 
-        for message in channel_messages["messages"]:
+        image_names = []
+        for message in batch_of_channel_messages["messages"]:
             files = message.get("files")
             if files is not None:
-                image_names = []
-                for i, file in enumerate(files):
+                iterator = 1
+                for file in files:
                     try:
-                        image_deleted = file["mode"] == "tombstone"
-                        if not image_deleted:
-                            image_id = file.get("id")
-                            image_name = file.get("name")
-                            image_name_formatted = "".join(
-                                [
-                                    x if (x.isalnum() or x in ".-") else "_"
-                                    for x in image_name
-                                ]
+                        if check_file_validity(file):
+                            image_name_formatted = get_formatted_image_name(file)
+                            image_name_deduplicated, iterator = deduplicate_image_name(
+                                image_name_formatted,
+                                is_duplicate=image_name_formatted in image_names,
+                                iterator=iterator,
                             )
-                            is_hdr = "HDR." in image_name_formatted
-                            ext = image_name_formatted.split(".")[-1]
-                            valid_extension = ext in [
-                                "jpg",
-                                "JPG",
-                                "jpeg",
-                                "JPEG",
-                                "png",
-                                "PNG",
-                            ]
-                            url_private = file.get("url_private")
-                            if (
-                                valid_extension
-                                and not is_hdr
-                                and url_private is not None
-                            ):
-                                name_is_duplicate = image_name_formatted in image_names
-                                if name_is_duplicate:
-                                    name_without_ext = image_name_formatted.split(".")[
-                                        -2
-                                    ]
-                                    iterated_suffix = "__" + str(i)
-                                    image_name_clean = (
-                                        name_without_ext + iterated_suffix + "." + ext
-                                    )
-                                else:
-                                    image_name_clean = image_name_formatted
-                                image_names.append(image_name_clean)
-                                photo_dictionary.update(
-                                    {
-                                        image_id: {
-                                            "image_name": image_name_clean,
-                                            "url_private": url_private,
-                                            "attached": False,
-                                        }
+                            image_names.append(image_name_deduplicated)
+                            image_id = file.get("id")
+                            photo_dictionary.update(
+                                {
+                                    image_id: {
+                                        "image_name": image_name_deduplicated,
+                                        "url_private": file.get("url_private"),
+                                        "attached": False,
                                     }
-                                )
-                            else:
-                                logger.info("File not in acceptable format:")
-                                logger.info(image_name_clean)
-                                logger.info(url_private)
+                                }
+                            )
+                        else:
+                            logger.info("File not in acceptable format:")
+                            logger.info(file.get("name"))
+                            logger.info(file.get("url_private"))
                     except Exception as e:
                         logger.info(e)
                         logger.info(file)
 
-        metadata = channel_messages.get("response_metadata")
+        metadata = batch_of_channel_messages.get("response_metadata")
         if metadata is None:
             break
         else:
