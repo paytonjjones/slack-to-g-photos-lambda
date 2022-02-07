@@ -19,7 +19,7 @@ logger.setLevel(logging.INFO)
 
 @pytest.mark.integration
 def test_create_slack_client():
-    client = create_slack_client()
+    client = create_slack_client(verify=False)
     try:
         client.auth_test()
     except Exception as e:
@@ -29,7 +29,7 @@ def test_create_slack_client():
 
 @pytest.mark.integration
 def test_get_channel_id():
-    client = create_slack_client()
+    client = create_slack_client(verify=False)
     channel_id = get_channel_id("photos", client)
     assert channel_id == "C01AJKY3CKC"
 

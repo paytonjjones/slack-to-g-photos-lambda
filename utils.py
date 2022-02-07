@@ -1,5 +1,6 @@
 import os
 import smtplib
+import ssl
 import requests
 import itertools
 import logging
@@ -24,9 +25,15 @@ def logTime(tz="US/Pacific"):
     logger.info(f"The current time in {tz} is {time}")
 
 
-def create_slack_client():
+def create_slack_client(verify=True):
     slack_token = os.environ["SLACK_BOT_TOKEN"]
-    client = WebClient(token=slack_token)
+    if verify:
+        client = WebClient(token=slack_token)
+    else:
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        client = WebClient(token=slack_token, ssl=ssl_context)
     return client
 
 
